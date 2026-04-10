@@ -1,0 +1,125 @@
+# monitoring/prometheus/alert_rules.yml
+# ============================================================
+# Reglas de alerta para SIGINT DataCenter Pro
+# ============================================================
+
+groups:
+  - name: sigint_infra
+    rules:
+
+      # Backend caído
+      - alert: BackendDown
+        expr: up{job="sigint_backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend SIGINT caído"
+          description: "El backend FastAPI no responde desde hace {{ .Duration }}"
+
+      # Alta latencia en API (>2s p95)
+      - alert: APIHighLatency
+        expr: histogram_quantile(0.95,
+                rate(http_request_duration_seconds_bucket{job="sigint_backend"}[5m])
+              ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latencia API elevada"
+          description: "P95 de latencia API = {{ $value | humanizeDuration }}"
+
+      # Tasa de errores HTTP alta (>5% de peticiones con 5xx)
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="sigint_backend",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="sigint_backend"}[5m]))
+          > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tasa de errores 5xx alta"
+          description: "{{ $value | humanizePercentage }} de peticiones devuelven 5xx"
+
+      # PostgreSQL sin respuesta
+      - alert: PostgreSQLDown
+        expr: up{job="postgresql"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL caído"
+
+      # Redis sin respuesta
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis caído"
+
+      # RAM alta (>90%)
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Uso de RAM alto: {{ $value | humanize }}%"
+
+      # Disco lleno (>85%)
+      - alert: DiskAlmostFull
+        expr: |
+          (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disco casi lleno: {{ $value | humanize }}%"
+          description: "Liberar espacio o ampliar disco en los próximos días"
+
+      # CPU alta sostenida (>85% durante 10 minutos)
+      - alert: HighCPU
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU sostenida alta: {{ $value | humanize }}%"
+
+      # Muchas conexiones PostgreSQL (>80% del máximo)
+      - alert: PostgreSQLConnectionsHigh
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Conexiones PostgreSQL al límite"
+
+  - name: sigint_negocio
+    rules:
+
+      # Muchas alertas sin revisar (puede indicar ataque o incidente)
+      - alert: MuchasAlertasSinRevisar
+        expr: |
+          pg_stat_user_tables_n_live_tup{relname="alertas",schemaname="osint"} > 100
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Acumulación de alertas OSINT sin revisar"
+
+      # Pipeline OSINT sin ejecutarse en las últimas 12h
+      - alert: PipelineInactivo
+        expr: |
+          time() - sigint_pipeline_last_run_timestamp > 43200
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pipeline OSINT inactivo más de 12 horas"

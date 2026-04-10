@@ -1,0 +1,63 @@
+# monitoring/prometheus/prometheus.yml
+# ============================================================
+# Configuración de Prometheus para SIGINT DataCenter Pro
+# Recoge métricas del backend FastAPI, PostgreSQL, Redis, Neo4j
+# ============================================================
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  scrape_timeout:      10s
+  external_labels:
+    monitor: 'sigint-monitor'
+    environment: 'production'
+
+# ── REGLAS DE ALERTAS ─────────────────────────────────────────
+rule_files:
+  - "alert_rules.yml"
+
+# ── ALERTMANAGER ──────────────────────────────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []   # Configurar alertmanager si se necesitan notificaciones
+
+# ── FUENTES DE MÉTRICAS ───────────────────────────────────────
+scrape_configs:
+
+  # Backend FastAPI (prometheus-fastapi-instrumentator)
+  - job_name: 'sigint_backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # PostgreSQL (postgres_exporter)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+    scrape_interval: 30s
+
+  # Redis (redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+    scrape_interval: 15s
+
+  # Node exporter (métricas del host: CPU, RAM, disco)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node_exporter:9100']
+    scrape_interval: 30s
+
+  # Nginx (nginx-prometheus-exporter)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx_exporter:9113']
+    scrape_interval: 30s
+
+  # Cadvisor (métricas de contenedores Docker)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s

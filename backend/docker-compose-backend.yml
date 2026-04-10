@@ -1,0 +1,62 @@
+# ============================================================
+# SIGINT DataCenter Pro — Adición Fase 2
+# Añadir este bloque al docker-compose.yml existente,
+# dentro de la sección "services:"
+# ============================================================
+#
+# INSTRUCCIONES DE INTEGRACIÓN:
+#   1. Abre docker-compose.yml
+#   2. Copia el bloque "backend:" de abajo
+#   3. Pégalo al final de la sección "services:", antes de "volumes:"
+#   4. Ejecuta: docker compose up -d backend
+#
+# ============================================================
+
+# ── PEGAR DENTRO DE services: ────────────────────────────────
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sigint_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      NEO4J_HOST: neo4j
+      REDIS_HOST: redis
+      OLLAMA_HOST: ollama
+      APP_ENV: ${APP_ENV:-development}
+    volumes:
+      - ./backend:/app                    # hot-reload en desarrollo
+      - ./data/uploads:/app/data/uploads
+      - ./logs:/app/logs
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - sigint_net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --reload
+        --reload-dir /app/app
+        --loop uvloop
+        --http httptools
+        --log-level info
+
+# ── AÑADIR TAMBIÉN A .env ────────────────────────────────────
+# BACKEND_PORT=8000

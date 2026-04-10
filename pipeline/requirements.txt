@@ -1,0 +1,45 @@
+# pipeline/requirements.txt
+# ============================================================
+# SIGINT DataCenter Pro — Pipeline OSINT dependencies
+# ============================================================
+
+# ── SCRAPING ──────────────────────────────────────────────────
+scrapy==2.11.2
+playwright==1.44.0          # JS rendering para páginas dinámicas
+httpx[http2]==0.27.0        # cliente HTTP async rápido
+beautifulsoup4==4.12.3
+lxml==5.2.2
+fake-useragent==1.5.1       # rotación de user agents
+stem==1.8.3                 # Tor proxy (opcional)
+
+# ── NLP / NER ─────────────────────────────────────────────────
+spacy==3.7.4
+# Modelo español: python -m spacy download es_core_news_lg
+transformers==4.41.2        # modelos HuggingFace para NER avanzado
+torch==2.3.0                # backend PyTorch (CPU)
+
+# ── OCR ───────────────────────────────────────────────────────
+pytesseract==0.3.10
+pdfplumber==0.11.1
+Pillow==10.3.0
+pdf2image==1.17.0
+
+# ── ORQUESTACIÓN ──────────────────────────────────────────────
+apache-airflow==2.9.1
+apache-airflow-providers-postgres==5.11.0
+apache-airflow-providers-redis==3.6.0
+
+# ── BASE DE DATOS ─────────────────────────────────────────────
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+sqlalchemy[asyncio]==2.0.30
+redis[hiredis]==5.0.4
+
+# ── UTILIDADES ────────────────────────────────────────────────
+python-dotenv==1.0.1
+pydantic==2.7.1
+structlog==24.1.0
+tenacity==8.3.0             # retry con backoff exponencial
+feedparser==6.0.11          # RSS
+openpyxl==3.1.2             # Excel
+pandas==2.2.2               # procesamiento tabular

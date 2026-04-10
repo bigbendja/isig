@@ -1,0 +1,207 @@
+# docker-compose.prod.yml
+# ============================================================
+# SIGINT DataCenter Pro — Configuración de producción
+# Usar: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ============================================================
+
+
+services:
+
+  # ── NGINX + SSL ───────────────────────────────────────────────
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: sigint_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/nginx.conf.template:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - sigint_net
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      - DOMAIN=${DOMAIN}
+    entrypoint: /bin/sh -c "envsubst '\$DOMAIN' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7474/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ── CERTBOT (SSL automático) ──────────────────────────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: sigint_certbot
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renovar cada 12 horas (certbot comprueba si hace falta)
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done'"
+
+  # ── BACKEND (producción: sin hot-reload) ─────────────────────
+  backend:
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 4
+        --loop uvloop
+        --http httptools
+        --log-level warning
+        --no-access-log
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+
+  # ── PROMETHEUS ────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: sigint_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=http://localhost:8080/prometheus'
+      - '--web.route-prefix=/'
+    networks:
+      - sigint_net
+    expose:
+      - "9090"
+
+  # ── GRAFANA ───────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.3.3
+    container_name: sigint_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme_grafana}
+      GF_SERVER_ROOT_URL:         "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_USERS_ALLOW_SIGN_UP:    "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+    networks:
+      - sigint_net
+    expose:
+      - "3000"
+    depends_on:
+      - prometheus
+
+  # ── LOKI (logs) ────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: sigint_loki
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - ./monitoring/loki/data:/loki   # <-- cambio aquí, volumen escribible
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - sigint_net
+    expose:
+      - "3100"
+
+  # ── PROMTAIL (recolector de logs) ─────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: sigint_promtail
+    restart: unless-stopped
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./monitoring/promtail.yml:/etc/promtail/config.yml:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - sigint_net
+    depends_on:
+      - loki
+
+  # ── EXPORTERS DE MÉTRICAS ─────────────────────────────────────
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: sigint_pg_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    networks:
+      - sigint_net
+    expose:
+      - "9187"
+    depends_on:
+      - postgres
+
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.58.0
+    container_name: sigint_redis_exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks:
+      - sigint_net
+    expose:
+      - "9121"
+
+  node_exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: sigint_node_exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - sigint_net
+    expose:
+      - "9100"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: sigint_cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - sigint_net
+    expose:
+      - "8080"
+
+volumes:
+  certbot_certs:
+  certbot_www:
+  nginx_logs:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+networks:
+  sigint_net:
+    driver: bridge

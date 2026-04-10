@@ -1,0 +1,42 @@
+# Entorno y secretos — NUNCA subir a git
+.env
+.env.local
+.env.*.local
+*.env.bak
+
+# Datos persistentes
+data/
+backups/
+logs/
+
+# Docker
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+dist/
+.nuxt/
+
+# Editors
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Temporales
+*.tmp
+*.bak
+*.log

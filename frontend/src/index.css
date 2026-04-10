@@ -1,0 +1,226 @@
+@import 'leaflet/dist/leaflet.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── DESIGN TOKENS ───────────────────────────────────────────── */
+:root {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f8f9fb;
+  --bg-tertiary:   #f0f2f5;
+  --bg-elevated:   #ffffff;
+
+  --text-primary:   #0d1117;
+  --text-secondary: #4b5563;
+  --text-tertiary:  #9ca3af;
+  --text-muted:     #d1d5db;
+
+  --border:         #e5e7eb;
+  --border-strong:  #d1d5db;
+
+  --brand:          #1D9E75;
+  --brand-light:    #E1F5EE;
+  --brand-dark:     #0F6E56;
+
+  --navy:           #0A1628;
+  --navy-mid:       #1C3D5E;
+
+  --accent-red:     #ef4444;
+  --accent-amber:   #f59e0b;
+  --accent-blue:    #3b82f6;
+  --accent-purple:  #8b5cf6;
+
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md:  0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg:  0 10px 15px rgba(0,0,0,0.04), 0 4px 6px rgba(0,0,0,0.04);
+
+  --sidebar-w:  220px;
+  --topbar-h:   52px;
+}
+
+.dark {
+  --bg-primary:    #0d1117;
+  --bg-secondary:  #161b22;
+  --bg-tertiary:   #1c2128;
+  --bg-elevated:   #21262d;
+
+  --text-primary:   #e6edf3;
+  --text-secondary: #8b949e;
+  --text-tertiary:  #6e7681;
+  --text-muted:     #3d444d;
+
+  --border:         #30363d;
+  --border-strong:  #484f58;
+
+  --brand:          #2dcea0;
+  --brand-light:    #0d2b22;
+  --brand-dark:     #1D9E75;
+
+  --navy:           #cdd9e5;
+  --navy-mid:       #a6b5c5;
+}
+
+/* ── BASE ─────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* ── SCROLLBARS ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ── LEAFLET OVERRIDES ────────────────────────────────────────── */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--bg-secondary);
+}
+.leaflet-popup-content-wrapper {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+.leaflet-popup-tip { background: var(--bg-elevated); }
+
+/* ── COMPONENTES BASE ─────────────────────────────────────────── */
+@layer components {
+
+  .card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .card-elevated {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-md
+           text-sm font-medium transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    border: 1px solid var(--border);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+  .btn:hover:not(:disabled) { background: var(--bg-secondary); }
+  .btn:active:not(:disabled) { transform: scale(0.98); }
+
+  .btn-primary {
+    @apply btn;
+    background: var(--brand);
+    border-color: var(--brand-dark);
+    color: white;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--brand-dark); }
+
+  .btn-danger {
+    @apply btn;
+    background: var(--accent-red);
+    border-color: #dc2626;
+    color: white;
+  }
+
+  .btn-ghost {
+    @apply btn;
+    border-color: transparent;
+    background: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) { background: var(--bg-secondary); }
+
+  .input {
+    @apply w-full px-3 py-2 rounded-md text-sm transition-all duration-150 outline-none;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+  }
+  .input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 20%, transparent);
+  }
+  .input::placeholder { color: var(--text-tertiary); }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+
+  .risk-dot {
+    @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
+  }
+
+  /* Risk color classes */
+  .risk-0  { background: #22c55e; }
+  .risk-25 { background: #84cc16; }
+  .risk-50 { background: #f59e0b; }
+  .risk-75 { background: #f97316; }
+  .risk-100 { background: #ef4444; }
+
+  .level-1 { @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200; }
+  .level-2 { @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200; }
+  .level-3 { @apply bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200; }
+  .level-4 { @apply bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200; }
+  .level-5 { @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200; }
+}
+
+/* ── ANIMACIONES ──────────────────────────────────────────────── */
+@layer utilities {
+  .animate-in { animation: fadeIn 0.15s ease-out; }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--bg-secondary) 25%,
+      var(--bg-tertiary) 50%,
+      var(--bg-secondary) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── MAPA — MARCADORES PERSONALIZADOS ────────────────────────── */
+.entity-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.3);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.entity-marker:hover { transform: scale(1.4); }
+.entity-marker.persona     { background: var(--accent-blue); }
+.entity-marker.institucion { background: var(--accent-amber); }
+.entity-marker.high-risk   { background: var(--accent-red); animation: pulse 2s infinite; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 0 0 4px rgba(239,68,68,0.3); }
+  50%       { box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 0 0 8px rgba(239,68,68,0.1); }
+}

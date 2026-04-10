@@ -1,0 +1,64 @@
+# ============================================================
+# SIGINT DataCenter Pro — Backend dependencies
+# Python 3.11+
+# ============================================================
+
+# ── FRAMEWORK ─────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9         # form data / file uploads
+
+# ── BASE DE DATOS ─────────────────────────────────────────────
+sqlalchemy[asyncio]==2.0.30
+asyncpg==0.29.0                 # PostgreSQL async driver
+alembic==1.13.1                 # migraciones
+psycopg2-binary==2.9.9          # sync driver (para alembic)
+
+# NEO4J
+neo4j==5.19.0
+
+# REDIS
+redis[hiredis]==5.0.4
+celery[redis]==5.3.6            # cola de tareas async
+
+# ── AUTENTICACIÓN ─────────────────────────────────────────────
+python-jose[cryptography]==3.3.0  # JWT
+passlib[bcrypt]==1.7.4            # hashing contraseñas
+pyotp==2.9.0                      # 2FA TOTP
+qrcode[pil]==7.4.2                # QR para configurar 2FA
+
+# ── VALIDACIÓN Y SERIALIZACIÓN ────────────────────────────────
+pydantic==2.7.1
+pydantic-settings==2.2.1
+email-validator==2.1.1
+
+# ── IA / LLM GATEWAY ──────────────────────────────────────────
+httpx==0.27.0                   # cliente HTTP async (Ollama + APIs externas)
+openai==1.25.0                  # OpenAI + Anthropic compatible
+anthropic==0.25.0
+
+# ── GEOLOCALIZACIÓN ───────────────────────────────────────────
+shapely==2.0.4
+geojson==3.1.0
+
+# ── UTILIDADES ────────────────────────────────────────────────
+python-dotenv==1.0.1
+orjson==3.10.3                  # JSON más rápido
+python-slugify==8.0.4
+babel==2.15.0                   # internacionalización
+tenacity==8.3.0                 # retry logic
+
+# ── LOGGING Y MONITOREO ───────────────────────────────────────
+structlog==24.1.0               # logs estructurados JSON
+prometheus-fastapi-instrumentator==6.1.0
+
+# ── TESTING ───────────────────────────────────────────────────
+pytest==8.2.0
+pytest-asyncio==0.23.6
+httpx==0.27.0                   # cliente de test
+factory-boy==3.3.0
+faker==25.0.0
+
+feedparser==6.0.11              # parser RSS/Atom para crawler OSINT
+beautifulsoup4==4.12.3          # extracción HTML para web scraping básico
+lxml==5.2.2                     # parser HTML/XML rápido
